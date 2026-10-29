@@ -47,7 +47,7 @@ The full `Digest` object:
   ],
   "badLines": 1,
   "counts": {
-    "ok": 3,
+    "ok": 2,
     "retry": 1,
     "fail": 1
   }
