@@ -1,6 +1,6 @@
 ---
 plan: morning-digest
-status: ready
+status: done
 owner: rook
 opened: 2026-10-29
 ---
@@ -77,3 +77,27 @@ page again with `LANE_MARKER` unset (the banner reads "no marker set") and uploa
 link. Move this plan to `docs/plans/done/` with its issue list.
 
 Done when: the preview link no longer shows the lane marker.
+
+## Completed work and review
+
+- [#1 · Run log reader and shared digest types](https://github.com/riamf/s01e04-before-i-looked/issues/1)
+- [#2 · Digest page: GET /digest/:night](https://github.com/riamf/s01e04-before-i-looked/issues/2)
+- [#3 · Digest JSON: GET /api/digest/:night](https://github.com/riamf/s01e04-before-i-looked/issues/3)
+- [#4 · Status board: links and counts for each night](https://github.com/riamf/s01e04-before-i-looked/issues/4)
+- [#5 · Digest route tests](https://github.com/riamf/s01e04-before-i-looked/issues/5)
+- [#6 · Publish HTML preview for reviewer](https://github.com/riamf/s01e04-before-i-looked/issues/6)
+- [#7 · Remove preview marker after review and archive plan](https://github.com/riamf/s01e04-before-i-looked/issues/7)
+
+Reviewed preview: https://riamf.github.io/s01e04-before-i-looked/
+
+- [Reviewed deployment](https://github.com/riamf/s01e04-before-i-looked/actions/runs/40919010258)
+  used main commit `a1cb5b073da006b9f538f0391979161d1200ca1f`. The course
+  confirmed the reviewer had seen it before cleanup was separately approved.
+- [Markerless replacement deployment](https://github.com/riamf/s01e04-before-i-looked/actions/runs/40920528990)
+  used the same commit with `include_marker=false`. The workflow re-saved the
+  sample page over local HTTP, passed tests and typecheck, deployed it at the
+  same public URL, and deleted its upload artifact.
+- Verified on 2026-10-29: the exact public URL returned HTTP 200, the banner
+  read "no marker set", the original marker was absent, all five original jobs
+  and "bad lines 1" remained, and there were no scripts. The deployment run's
+  artifacts API returned `total_count: 0`.
