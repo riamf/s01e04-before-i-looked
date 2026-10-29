@@ -10,11 +10,14 @@ export type DigestRow = {
   runs: number;
   /** Number of this job's valid events whose status is retry. */
   retries: number;
+  /** Number of fail events, including failures followed by recovery. */
+  failures: number;
   /** Status on the job's last valid event, not its worst historical status. */
   lastStatus: RunStatus;
   /**
-   * Error on the job's last valid event; missing or null becomes null.
-   * A later event without an error clears an earlier error.
+   * Latest non-null, nonempty error encountered for this job in file order.
+   * Absent, null, or empty errors never erase a prior error, even after recovery.
+   * Null if no valid event for this job supplied a nonempty error string.
    */
   lastError: string | null;
   /** Timestamp on the first valid event for this job, exactly as logged. */
@@ -70,11 +73,14 @@ export type Digest = {
  *
  * Aggregation:
  * - Group by exact job string. runs counts every valid event; retries counts
- *   retry events only. Thus sum(row.runs) equals counts.ok + counts.retry +
- *   counts.fail, and sum(row.retries) equals counts.retry.
+ *   retry events only; failures counts fail events even if the job later
+ *   recovers. Thus sum(row.runs) equals counts.ok + counts.retry + counts.fail,
+ *   sum(row.retries) equals counts.retry, and sum(row.failures) equals counts.fail.
  * - firstAt comes from the first valid event encountered for a job; lastAt,
- *   owner, lastStatus, and lastError come from its last valid event. File order
- *   wins even if timestamps are out of chronological order or identical.
+ *   owner, and lastStatus come from its last valid event. File order wins even
+ *   if timestamps are out of chronological order or identical.
+ * - lastError is the latest non-null, nonempty error in file order, or null if
+ *   none occurred. Absent, null, and empty errors do not erase an earlier error.
  * - Return rows sorted ascending by job using case-sensitive code-unit order,
  *   independent of the runtime locale. Preserve original timestamp offsets.
  */
