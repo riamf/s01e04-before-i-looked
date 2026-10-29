@@ -90,6 +90,7 @@ const MAIN_DIGEST: Digest = {
 
 const text = (html: string): string =>
   html
+    .replace(/<style[\s\S]*?<\/style>/g, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
@@ -98,6 +99,11 @@ const text = (html: string): string =>
     .replace(/&#39;/g, "'")
     .replace(/\s+/g, ' ')
     .trim();
+
+const badLineCount = (html: string): string | undefined => {
+  const match = text(html).match(/\bbad lines?\s+(\d+)\b|\b(\d+)\s+bad lines?\b/i);
+  return match?.[1] ?? match?.[2];
+};
 
 const bodyRows = (html: string): string[] =>
   (html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g) ?? []).filter((row) => /<td\b/.test(row));
@@ -196,14 +202,14 @@ describe('digest routes', () => {
       const res = await createApp(configFor(dir)).request('/digest/2026-10-28');
       const html = await res.text();
       expect(res.status).toBe(200);
-      expect(text(html)).toMatch(/\b2\b[^a-z]{0,3}(?:\w+\s+){0,3}(?:bad|invalid|rejected|skipped)/i);
+      expect(badLineCount(html)).toBe('2');
     });
 
     it('exposes the bad line count next to a bad-line label', async () => {
       const dir = newRunsDir();
       writeNight(dir, '2026-10-28', `${MAIN_LINES.join('\n')}\n`);
       const html = await (await createApp(configFor(dir)).request('/digest/2026-10-28')).text();
-      expect(text(html)).toMatch(/\b5\b[^a-z]{0,3}(?:\w+\s+){0,3}(?:bad|invalid|rejected|skipped)/i);
+      expect(badLineCount(html)).toBe('5');
     });
 
     it('still renders valid rows alongside malformed and schema-invalid lines', async () => {
