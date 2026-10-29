@@ -1,0 +1,84 @@
+name: Preview for review
+
+on:
+  workflow_dispatch:
+    inputs:
+      include_marker:
+        description: Include the lane marker (requires explicit approval for public disclosure)
+        type: boolean
+        required: true
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: pages-preview
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact_id }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      # Installation happens only on the runner after an approved manual dispatch.
+      - run: npm install --global pnpm@12.16.1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm typecheck
+      - name: Export sample fixture over local HTTP
+        env:
+          LANE_MARKER: ${{ inputs.include_marker && secrets.LANE_MARKER || '' }}
+          MARKER_REQUIRED: ${{ inputs.include_marker }}
+        run: |
+          test ! -e .env
+          node --input-type=module -e "import { readFileSync } from 'node:fs'; if (JSON.parse(readFileSync('rig.json', 'utf8')).runsDir !== 'runs') throw new Error('Preview requires the checked-in sample runs directory');"
+          pnpm preview:export
+          test "$(find var/preview -mindepth 1 | wc -l)" -eq 1
+          test -f var/preview/index.html
+          test ! -L var/preview/index.html
+      - uses: actions/upload-pages-artifact@v5.0.0
+        id: upload
+        with:
+          path: var/preview
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v6.0.0
+        with:
+          enablement: false
+      - uses: actions/deploy-pages@v5.0.1
+        id: deployment
+
+  cleanup:
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete the uploaded artifact after successful deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+        run: |
+          test -n "$ARTIFACT_ID"
+          gh api --method DELETE "repos/$GH_REPO/actions/artifacts/$ARTIFACT_ID"
